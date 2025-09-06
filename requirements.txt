@@ -1,0 +1,4 @@
+mesa
+networkx
+pandas
+matplotlib

@@ -17,8 +17,8 @@ class AgentType(enum.Enum):
 class GovernanceAgent(mesa.Agent):
     """An agent representing an organizational actor in the governance network."""
 
-    def __init__(self, unique_id, model, agent_type, resources, commitment, motivation_profile):
-        super().__init__(unique_id, model)
+    def __init__(self, model, agent_type, resources, commitment, motivation_profile):
+        super().__init__(model)
         self.agent_type = agent_type
         self.resources = resources
         self.commitment = commitment
@@ -58,7 +58,7 @@ class GovernanceAgent(mesa.Agent):
             if neighbors:
                 partner = self.random.choice(neighbors)
                 if self.model.G[self.unique_id][partner]['relationship_strength'] > 0.6:
-                    if (self.resources + self.model.agent_set.get(partner).resources) > self.model.project_resource_threshold:
+                    if (self.resources + self.model.G.nodes[partner]['agent'].resources) > self.model.project_resource_threshold:
                         self.model.successful_projects.append((self.unique_id, partner))
 
 
@@ -77,8 +77,6 @@ class GovernanceModel(mesa.Model):
         self.successful_projects = []
 
         # Create agents
-        
-        self.agent_id_counter = 0
         self.create_agents()
 
         # Initialize network
@@ -120,10 +118,9 @@ class GovernanceModel(mesa.Model):
                 elif agent_type == AgentType.ACADEMIC:
                     commitment = self.random.uniform(0.8, 1.0)
 
-                agent = GovernanceAgent(self.agent_id_counter, self, agent_type, resources, commitment, motivation_profile)
+                agent = GovernanceAgent(self, agent_type, resources, commitment, motivation_profile)
                 self.agent_set.add(agent)
                 self.G.add_node(agent.unique_id, agent=agent)
-                self.agent_id_counter += 1
         
         # Designate special agents
         govt_agents = [a for a in self.agent_set if a.agent_type == AgentType.GOVERNMENT]
@@ -186,8 +183,8 @@ class GovernanceModel(mesa.Model):
     def execute_joint_projects(self):
         """Execute successful joint projects."""
         for u, v in self.successful_projects:
-            agent_u = self.agent_set.get(u)
-            agent_v = self.agent_set.get(v)
+            agent_u = self.G.nodes[u]['agent']
+            agent_v = self.G.nodes[v]['agent']
             
             agent_u.resources += 10
             agent_v.resources += 10
@@ -208,36 +205,34 @@ class GovernanceModel(mesa.Model):
         self.datacollector.collect(self)
 
 
-def visualize_network(G, title=""):
-    """Visualize the network graph."""
-    pos = nx.spring_layout(G, seed=42)
-    
-    node_colors = []
-    node_sizes = []
-    
-    for node in G.nodes():
-        agent = G.nodes[node]['agent']
-        color_map = {
-            AgentType.GOVERNMENT: 'blue',
-            AgentType.CSO: 'green',
-            AgentType.PRIVATE_ENTERPRISE: 'red',
-            AgentType.ACADEMIC: 'purple'
-        }
-        node_colors.append(color_map[agent.agent_type])
-        node_sizes.append(agent.resources * 5)
+import os
 
-    edge_widths = [G[u][v]['relationship_strength'] * 5 for u, v in G.edges()]
+def visualize_network(model, title="Network State", save_path=None):
+    plt.figure(figsize=(10, 8))
+    pos = nx.spring_layout(model.G, seed=42)  # For consistent layout
 
-    plt.figure(figsize=(12, 12))
-    nx.draw_networkx_edges(G, pos, width=edge_widths, alpha=0.5)
-    nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=node_sizes)
-    nx.draw_networkx_labels(G, pos, font_size=8)
-    
+    node_colors = [agent.agent_type.value for agent in model.agent_set]
+    node_sizes = [agent.resources * 5 + 100 for agent in model.agent_set]  # Scale resources for visibility
+
+    nx.draw_networkx_nodes(model.G, pos, node_color=node_colors, node_size=node_sizes, cmap=plt.cm.get_cmap('viridis'), alpha=0.8)
+    nx.draw_networkx_edges(model.G, pos, width=0.5, alpha=0.5, edge_color='gray')
+    nx.draw_networkx_labels(model.G, pos, font_size=8)
+
     plt.title(title)
-    plt.show()
+    plt.colorbar(plt.cm.ScalarMappable(cmap=plt.cm.get_cmap('viridis')), ax=plt.gca(), label='Agent Type')
+    
+    if save_path:
+        plt.savefig(save_path)
+        plt.clf()
+        plt.close()
+    else:
+        plt.show()
 
 
 if __name__ == "__main__":
+    # Create results directory if it doesn't exist
+    os.makedirs('results', exist_ok=True)
+
     # Scenario 1: Facilitated Network Growth (Baseline)
     params = {
         "num_agents_per_type": {
@@ -254,13 +249,13 @@ if __name__ == "__main__":
     model = GovernanceModel(**params)
 
     print("Initial Network:")
-    visualize_network(model.G, "Initial Network State")
+    visualize_network(model, "Initial Network State", save_path="results/initial_network.png")
 
     for i in range(100):
         model.step()
 
     print("\nFinal Network:")
-    visualize_network(model.G, "Final Network State")
+    visualize_network(model, "Final Network State", save_path="results/final_network.png")
 
     model_data = model.datacollector.get_model_vars_dataframe()
     agent_data = model.datacollector.get_agent_vars_dataframe()
