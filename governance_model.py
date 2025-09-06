@@ -65,16 +65,19 @@ class GovernanceAgent(mesa.Agent):
 class GovernanceModel(mesa.Model):
     """The main model for the governance network simulation."""
 
-    def __init__(self, num_agents_per_type, link_decay_rate, forum_frequency, project_resource_threshold):
+    def __init__(self, num_agents_per_type, link_decay_rate, forum_frequency, project_resource_threshold, midpoint_removal_step=None):
         super().__init__()
         self.num_agents_per_type = num_agents_per_type
         self.link_decay_rate = link_decay_rate
         self.forum_frequency = forum_frequency
         self.project_resource_threshold = project_resource_threshold
+        self.midpoint_removal_step = midpoint_removal_step
         self.agent_set = AgentSet([], self.random)
         self.G = nx.Graph()
         self.space = mesa.space.NetworkGrid(self.G)
         self.successful_projects = []
+        self.running = True # Control simulation loop
+        self.schedule = mesa.time.RandomActivation(self) # Initialize scheduler
 
         # Create agents
         self.create_agents()
@@ -89,12 +92,13 @@ class GovernanceModel(mesa.Model):
                 "Average Clustering": lambda m: nx.average_clustering(m.G),
                 "Number of Active Edges": lambda m: m.G.number_of_edges(),
                 "Successful Projects": lambda m: len(m.successful_projects),
+                "Largest Connected Component Size": lambda m: len(max(nx.connected_components(m.G), key=len)) if m.G.nodes else 0,
             },
             agent_reporters={
                 "agent_type": "agent_type",
                 "resources": "resources",
                 "commitment": "commitment",
-                "Degree Centrality": lambda a: a.model.G.degree[a.unique_id],
+                "Degree Centrality": lambda a: a.model.G.degree[a.unique_id] if a.unique_id in a.model.G else 0,
             },
         )
 
@@ -197,10 +201,17 @@ class GovernanceModel(mesa.Model):
 
     def step(self):
         """Advance the model by one step."""
+        self.schedule.step() # Advance the scheduler
+
+        if self.midpoint_removal_step and self.schedule.steps == self.midpoint_removal_step:
+            emu_agent = next((a for a in self.agent_set if hasattr(a, "is_emu")), None)
+            if emu_agent:
+                print(f"Removing EMU agent {emu_agent.unique_id} at step {self.schedule.steps}")
+                self.agent_set.remove(emu_agent)
+                self.G.remove_node(emu_agent.unique_id)
+
         self.trigger_forum_event()
         self.link_decay()
-        for agent in self.agent_set.shuffle():
-            agent.step()
         self.execute_joint_projects()
         self.datacollector.collect(self)
 
@@ -257,11 +268,39 @@ if __name__ == "__main__":
     print("\nFinal Network:")
     visualize_network(model, "Final Network State", save_path="results/final_network.png")
 
-    model_data = model.datacollector.get_model_vars_dataframe()
-    agent_data = model.datacollector.get_agent_vars_dataframe()
+    print("\n" + "-"*30)
+    print("Running Scenario 2: Institutional Fragility and Key Actor Departure")
+    print("-"*30 + "\n")
 
-    print("\nModel-level Data:")
-    print(model_data)
+    scenario2_params = {
+        "num_agents_per_type": {
+            AgentType.GOVERNMENT: 5,
+            AgentType.CSO: 5,
+            AgentType.PRIVATE_ENTERPRISE: 3,
+            AgentType.ACADEMIC: 2,
+        },
+        "link_decay_rate": 0.02,
+        "forum_frequency": 0.2,
+        "project_resource_threshold": 100,
+        "midpoint_removal_step": 50,
+    }
 
-    print("\nAgent-level Data:")
-    print(agent_data)
+    model2 = GovernanceModel(**scenario2_params)
+
+    print("Initial Network (Scenario 2):")
+    visualize_network(model2, "Initial Network State (Scenario 2)", save_path="results/scenario2_initial_network.png")
+
+    for i in range(100):
+        model2.step()
+
+    print("\nFinal Network (Scenario 2):")
+    visualize_network(model2, "Final Network State (Scenario 2)", save_path="results/scenario2_final_network.png")
+
+    model2_data = model2.datacollector.get_model_vars_dataframe()
+    agent2_data = model2.datacollector.get_agent_vars_dataframe()
+
+    print("\nModel-level Data (Scenario 2):")
+    print(model2_data)
+
+    print("\nAgent-level Data (Scenario 2):")
+    print(agent2_data)
