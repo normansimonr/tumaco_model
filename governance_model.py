@@ -13,6 +13,7 @@ class AgentType(enum.Enum):
     CSO = 2
     PRIVATE_ENTERPRISE = 3
     ACADEMIC = 4
+    RESOURCE_NODE = 5
 
 class GovernanceAgent(mesa.Agent):
     """An agent representing an organizational actor in the governance network."""
@@ -37,16 +38,26 @@ class GovernanceAgent(mesa.Agent):
                 for agent in self.model.agent_set
                 if agent.unique_id != self.unique_id and not self.model.G.has_edge(self.unique_id, agent.unique_id)
             ]
+
+            # Add resource node as a possible partner if it exists and is not connected
+            if hasattr(self.model, 'resource_node') and self.model.resource_node.unique_id != self.unique_id and not self.model.G.has_edge(self.unique_id, self.model.resource_node.unique_id):
+                possible_partners.append(self.model.resource_node)
+
             if possible_partners:
                 partner = self.random.choice(possible_partners)
                 
                 # Simplified probability calculation
-                homophily_score = 1 if self.agent_type == partner.agent_type else 0
-                resource_seeking_score = max(0, (partner.resources - self.resources) / 100)
-                
-                # Motivation profile weighs the scores
-                prob = (self.motivation_profile * homophily_score + 
-                        (1 - self.motivation_profile) * resource_seeking_score)
+                if hasattr(partner, "is_resource_node"):
+                    # Probability for resource node: proportional to agent's resources and degree
+                    agent_degree = self.model.G.degree[self.unique_id] if self.unique_id in self.model.G else 0
+                    prob = (self.resources / 100.0) * (agent_degree / (len(self.model.agent_set) - 1)) # Normalize resources and degree
+                else:
+                    homophily_score = 1 if self.agent_type == partner.agent_type else 0
+                    resource_seeking_score = max(0, (partner.resources - self.resources) / 100)
+                    
+                    # Motivation profile weighs the scores
+                    prob = (self.motivation_profile * homophily_score + 
+                            (1 - self.motivation_profile) * resource_seeking_score)
                 
                 if self.random.random() < prob:
                     self.model.G.add_edge(self.unique_id, partner.unique_id, relationship_strength=0.05)
@@ -65,13 +76,14 @@ class GovernanceAgent(mesa.Agent):
 class GovernanceModel(mesa.Model):
     """The main model for the governance network simulation."""
 
-    def __init__(self, num_agents_per_type, link_decay_rate, forum_frequency, project_resource_threshold, midpoint_removal_step=None):
+    def __init__(self, num_agents_per_type, link_decay_rate, forum_frequency, project_resource_threshold, midpoint_removal_step=None, resource_node_introduction_step=None):
         super().__init__()
         self.num_agents_per_type = num_agents_per_type
         self.link_decay_rate = link_decay_rate
         self.forum_frequency = forum_frequency
         self.project_resource_threshold = project_resource_threshold
         self.midpoint_removal_step = midpoint_removal_step
+        self.resource_node_introduction_step = resource_node_introduction_step
         self.agent_set = AgentSet([], self.random)
         self.G = nx.Graph()
         self.space = mesa.space.NetworkGrid(self.G)
@@ -93,6 +105,8 @@ class GovernanceModel(mesa.Model):
                 "Number of Active Edges": lambda m: m.G.number_of_edges(),
                 "Successful Projects": lambda m: len(m.successful_projects),
                 "Largest Connected Component Size": lambda m: len(max(nx.connected_components(m.G), key=len)) if m.G.nodes else 0,
+                "Resource Node Degree": lambda m: m.G.degree[m.resource_node.unique_id] if hasattr(m, 'resource_node') and m.resource_node.unique_id in m.G else 0,
+                "Gini Coefficient": lambda m: self.calculate_gini(m.agent_set),
             },
             agent_reporters={
                 "agent_type": "agent_type",
@@ -102,9 +116,28 @@ class GovernanceModel(mesa.Model):
             },
         )
 
+    def calculate_gini(self, agent_set):
+        """Calculates the Gini coefficient for agent resources."""
+        if not agent_set:
+            return 0.0
+        resources = sorted([agent.resources for agent in agent_set])
+        n = len(resources)
+        if n <= 1:
+            return 0.0
+        
+        numerator = sum((2 * i + 1 - n) * resources[i] for i in range(n))
+        denominator = n * sum(resources)
+        
+        if denominator == 0:
+            return 0.0
+        
+        return numerator / denominator
+
     def create_agents(self):
         """Create the agents for the model."""
         for agent_type in AgentType:
+            if agent_type == AgentType.RESOURCE_NODE: # Resource node is created dynamically
+                continue
             for _ in range(self.num_agents_per_type[agent_type]):
                 resources = self.random.uniform(10, 50)
                 commitment = self.random.uniform(0.2, 0.8)
@@ -210,6 +243,14 @@ class GovernanceModel(mesa.Model):
                 self.agent_set.remove(emu_agent)
                 self.G.remove_node(emu_agent.unique_id)
 
+        if self.resource_node_introduction_step and self.schedule.steps == self.resource_node_introduction_step:
+            resource_node_agent = GovernanceAgent(self, AgentType.RESOURCE_NODE, 1000000.0, 1.0, 0.5) # High resources, high commitment
+            self.agent_set.add(resource_node_agent)
+            self.G.add_node(resource_node_agent.unique_id, agent=resource_node_agent)
+            self.resource_node = resource_node_agent
+            setattr(resource_node_agent, "is_resource_node", True)
+            print(f"Introducing Resource Node {resource_node_agent.unique_id} at step {self.schedule.steps}")
+
         self.trigger_forum_event()
         self.link_decay()
         self.execute_joint_projects()
@@ -299,8 +340,39 @@ if __name__ == "__main__":
     model2_data = model2.datacollector.get_model_vars_dataframe()
     agent2_data = model2.datacollector.get_agent_vars_dataframe()
 
-    print("\nModel-level Data (Scenario 2):")
-    print(model2_data)
+    print("\n" + "-"*30)
+    print("Running Scenario 3: The Resource Opportunity Window")
+    print("-"*30)
 
-    print("\nAgent-level Data (Scenario 2):")
-    print(agent2_data)
+    scenario3_params = {
+        "num_agents_per_type": {
+            AgentType.GOVERNMENT: 5,
+            AgentType.CSO: 5,
+            AgentType.PRIVATE_ENTERPRISE: 3,
+            AgentType.ACADEMIC: 2,
+        },
+        "link_decay_rate": 0.02,
+        "forum_frequency": 0.2,
+        "project_resource_threshold": 100,
+        "resource_node_introduction_step": 50,
+    }
+
+    model3 = GovernanceModel(**scenario3_params)
+
+    print("Initial Network (Scenario 3):")
+    visualize_network(model3, "Initial Network State (Scenario 3)", save_path="results/scenario3_initial_network.png")
+
+    for i in range(100):
+        model3.step()
+
+    print("\nFinal Network (Scenario 3):")
+    visualize_network(model3, "Final Network State (Scenario 3)", save_path="results/scenario3_final_network.png")
+
+    model3_data = model3.datacollector.get_model_vars_dataframe()
+    agent3_data = model3.datacollector.get_agent_vars_dataframe()
+
+    print("\nModel-level Data (Scenario 3):")
+    print(model3_data)
+
+    print("\nAgent-level Data (Scenario 3):")
+    print(agent3_data)
