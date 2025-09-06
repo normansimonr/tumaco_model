@@ -54,6 +54,13 @@ if __name__ == "__main__":
     print("\nFinal Network:")
     visualize_network(model, "Final Network State", save_path="results/final_network.png")
 
+    model1_model_data = model.datacollector.get_model_vars_dataframe()
+    model1_agent_data = model.datacollector.get_agent_vars_dataframe()
+    model1_model_data.to_csv("results/scenario1_model_data.csv")
+    model1_agent_data.to_csv("results/scenario1_agent_data.csv")
+    print("Model-level data (Scenario 1) saved to results/scenario1_model_data.csv")
+    print("Agent-level data (Scenario 1) saved to results/scenario1_agent_data.csv")
+
     print("\n" + "-"*30)
     print("Running Scenario 2: Institutional Fragility and Key Actor Departure")
     print("-"*30 + "\n")
@@ -81,6 +88,13 @@ if __name__ == "__main__":
 
     print("\nFinal Network (Scenario 2):")
     visualize_network(model2, "Final Network State (Scenario 2)", save_path="results/scenario2_final_network.png")
+
+    model2_model_data = model2.datacollector.get_model_vars_dataframe()
+    model2_agent_data = model2.datacollector.get_agent_vars_dataframe()
+    model2_model_data.to_csv("results/scenario2_model_data.csv")
+    model2_agent_data.to_csv("results/scenario2_agent_data.csv")
+    print("Model-level data (Scenario 2) saved to results/scenario2_model_data.csv")
+    print("Agent-level data (Scenario 2) saved to results/scenario2_agent_data.csv")
 
     print("\n" + "-"*30)
     print("Running Scenario 3: The Resource Opportunity Window")
