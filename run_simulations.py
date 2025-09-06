@@ -1,25 +1,42 @@
 import os
 import networkx as nx
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches # Import for custom legend
 import pandas as pd
 from governance_model import AgentType, GovernanceAgent, GovernanceModel
+
+# Define discrete colors for each AgentType
+AGENT_COLORS = {
+    AgentType.GOVERNMENT: '#1f77b4',  # Blue
+    AgentType.CSO: '#ff7f0e',       # Orange
+    AgentType.PRIVATE_ENTERPRISE: '#2ca02c', # Green
+    AgentType.ACADEMIC: '#d62728',   # Red
+    AgentType.RESOURCE_NODE: '#9467bd', # Purple
+}
 
 def visualize_network(model, title="Network State", save_path=None):
     plt.figure(figsize=(10, 8))
     pos = nx.spring_layout(model.G, seed=42)  # For consistent layout
 
-    node_colors = [agent.agent_type.value for agent in model.agent_set]
-    node_sizes = [agent.resources * 5 + 100 for agent in model.agent_set]  # Scale resources for visibility
+    # Get colors based on agent_type
+    node_colors = [AGENT_COLORS[agent.agent_type] for agent in model.agent_set]
+    node_sizes = [min(agent.resources * 5 + 100, 2000) for agent in model.agent_set]  # Scale resources for visibility, cap at 2000
 
-    nx.draw_networkx_nodes(model.G, pos, node_color=node_colors, node_size=node_sizes, cmap=plt.cm.get_cmap('viridis'), alpha=0.8)
+    nx.draw_networkx_nodes(model.G, pos, node_color=node_colors, node_size=node_sizes, alpha=0.8)
     nx.draw_networkx_edges(model.G, pos, width=0.5, alpha=0.5, edge_color='gray')
-    nx.draw_networkx_labels(model.G, pos, font_size=8)
+    
 
     plt.title(title)
-    plt.colorbar(plt.cm.ScalarMappable(cmap=plt.cm.get_cmap('viridis')), ax=plt.gca(), label='Agent Type')
+    
+    # Create custom legend for discrete agent types
+    legend_elements = [
+        mpatches.Patch(color=color, label=agent_type.name.replace('_', ' ').title())
+        for agent_type, color in AGENT_COLORS.items()
+    ]
+    plt.legend(handles=legend_elements, title="Agent Type", bbox_to_anchor=(1.05, 1), loc='upper left')
     
     if save_path:
-        plt.savefig(save_path)
+        plt.savefig(save_path, bbox_inches='tight') # Use bbox_inches='tight' to include legend
         plt.clf()
         plt.close()
     else:
