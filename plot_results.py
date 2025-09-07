@@ -37,17 +37,11 @@ def plot_time_series(metric_name, df_s1_all_runs, df_s2_all_runs, df_s3_all_runs
     plt.plot(mean_s3.index, mean_s3, label=scenario_names[2], color=color_s3)
 
     # Plot spread (shadowed areas) with transparent fill and lighter borders
-    plt.fill_between(mean_s1.index, mean_s1 - std_s1, mean_s1 + std_s1, color=color_s1, alpha=0.0)
-    plt.plot(mean_s1.index, mean_s1 - std_s1, color=lighten_color(color_s1, 0.7), linestyle='--', linewidth=0.8)
-    plt.plot(mean_s1.index, mean_s1 + std_s1, color=lighten_color(color_s1, 0.7), linestyle='--', linewidth=0.8)
+    plt.fill_between(mean_s1.index, mean_s1 - std_s1, mean_s1 + std_s1, color=color_s1, alpha=0.1)
 
-    plt.fill_between(mean_s2.index, mean_s2 - std_s2, mean_s2 + std_s2, color=color_s2, alpha=0.0)
-    plt.plot(mean_s2.index, mean_s2 - std_s2, color=lighten_color(color_s2, 0.7), linestyle='--', linewidth=0.8)
-    plt.plot(mean_s2.index, mean_s2 + std_s2, color=lighten_color(color_s2, 0.7), linestyle='--', linewidth=0.8)
+    plt.fill_between(mean_s2.index, mean_s2 - std_s2, mean_s2 + std_s2, color=color_s2, alpha=0.1)
 
-    plt.fill_between(mean_s3.index, mean_s3 - std_s3, mean_s3 + std_s3, color=color_s3, alpha=0.0)
-    plt.plot(mean_s3.index, mean_s3 - std_s3, color=lighten_color(color_s3, 0.7), linestyle='--', linewidth=0.8)
-    plt.plot(mean_s3.index, mean_s3 + std_s3, color=lighten_color(color_s3, 0.7), linestyle='--', linewidth=0.8)
+    plt.fill_between(mean_s3.index, mean_s3 - std_s3, mean_s3 + std_s3, color=color_s3, alpha=0.1)
 
     plt.xlabel("Step")
     plt.ylabel(metric_name)

@@ -74,8 +74,8 @@ class GovernanceAgent(mesa.Agent):
 class GovernanceModel(mesa.Model):
     """The main model for the governance network simulation."""
 
-    def __init__(self, num_agents_per_type, link_decay_rate, forum_frequency, project_resource_threshold, midpoint_removal_step=None, resource_node_introduction_step=None, seed=None):
-        super().__init__(seed=seed)
+    def __init__(self, num_agents_per_type, link_decay_rate, forum_frequency, project_resource_threshold, midpoint_removal_step=None, resource_node_introduction_step=None):
+        super().__init__()
         self.num_agents_per_type = num_agents_per_type
         self.link_decay_rate = link_decay_rate
         self.forum_frequency = forum_frequency

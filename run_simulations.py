@@ -5,7 +5,7 @@ import matplotlib.patches as mpatches # Import for custom legend
 import pandas as pd
 from governance_model import AgentType, GovernanceAgent, GovernanceModel
 
-FIXED_SEED = 42 # For replicable results
+from governance_model import AgentType, GovernanceAgent, GovernanceModel
 
 # Define discrete colors for each AgentType
 AGENT_COLORS = {
@@ -69,7 +69,7 @@ if __name__ == "__main__":
             "forum_frequency": 0.2,
             "project_resource_threshold": 100,
         }
-        model = GovernanceModel(**params, seed=FIXED_SEED + i) # Use a different seed for each run
+        model = GovernanceModel(**params) # No fixed seed for stochasticity
 
         # Only visualize the first run's initial and final state for representative purposes
         if i == 0:
@@ -112,7 +112,7 @@ if __name__ == "__main__":
             "project_resource_threshold": 100,
             "midpoint_removal_step": 50,
         }
-        model2 = GovernanceModel(**scenario2_params, seed=FIXED_SEED + i) # Use a different seed for each run
+        model2 = GovernanceModel(**scenario2_params) # No fixed seed for stochasticity
 
         if i == 0:
             print("Initial Network (Scenario 2, Run 1):")
@@ -154,7 +154,7 @@ if __name__ == "__main__":
             "project_resource_threshold": 100,
             "resource_node_introduction_step": 50,
         }
-        model3 = GovernanceModel(**scenario3_params, seed=FIXED_SEED + i) # Use a different seed for each run
+        model3 = GovernanceModel(**scenario3_params) # No fixed seed for stochasticity
 
         if i == 0:
             print("Initial Network (Scenario 3, Run 1):")
