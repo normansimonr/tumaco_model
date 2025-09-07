@@ -11,9 +11,11 @@ You are an expert Python programmer specializing in agent-based modeling using t
     *   The `GovernanceModel(mesa.Model)` class.
     *   A `main` execution block that runs a simulation for **Scenario 1** by default.
 4.  **Implementation Details:**
+    *   **Multiple Runs:** Each simulation scenario must be run a given number of times (e.g., 100 runs) to account for stochasticity.
+    *   **Data Aggregation:** For each metric, the results across these multiple runs should be averaged per time step. A measure of spread (e.g., standard deviation) should also be computed.
     *   **Initialization:** For the initial network, create a helper function that generates the specified "sparse bridging and dense bonding" structure. A simple way is to create N cliques (one for each agent type or subgroup) and then add a few random edges between these cliques.
     *   **Decision Logic:** Use simple probabilistic rules for agent decisions. For example, the probability of an agent `A` forming a link with agent `B` could be a weighted sum: `P(link) = w1 * homophily_score + w2 * resource_seeking_score`, where `homophily_score` is 1 if they are the same type and 0 otherwise, and `resource_seeking_score` is proportional to `(B.resources - A.resources)`.
-    *   **Data Output:** At the end of the simulation run, print the model-level and agent-level data collected by the `DataCollector` as pandas DataFrames.
+    *   **Data Output:** At the end of the simulation, the aggregated model-level and agent-level data (averages and spread) should be saved, preferably to CSV files.
 5.  **Visualization (Optional but Highly Recommended):** Include a function that uses Matplotlib and `networkx.draw()` to visualize the network state at the beginning and end of the simulation. In the visualization:
     *   Color nodes based on `agent_type`.
     *   Vary node size based on `resources`.
