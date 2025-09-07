@@ -5,6 +5,8 @@ import matplotlib.patches as mpatches # Import for custom legend
 import pandas as pd
 from governance_model import AgentType, GovernanceAgent, GovernanceModel
 
+FIXED_SEED = 42 # For replicable results
+
 # Define discrete colors for each AgentType
 AGENT_COLORS = {
     AgentType.GOVERNMENT: '#1f77b4',  # Blue
@@ -60,7 +62,7 @@ if __name__ == "__main__":
         "project_resource_threshold": 100,
     }
 
-    model = GovernanceModel(**params)
+    model = GovernanceModel(**params, seed=FIXED_SEED)
 
     print("Initial Network:")
     visualize_network(model, "Initial Network State", save_path="results/initial_network.png")
@@ -95,7 +97,7 @@ if __name__ == "__main__":
         "midpoint_removal_step": 50,
     }
 
-    model2 = GovernanceModel(**scenario2_params)
+    model2 = GovernanceModel(**scenario2_params, seed=FIXED_SEED)
 
     print("Initial Network (Scenario 2):")
     visualize_network(model2, "Initial Network State (Scenario 2)", save_path="results/scenario2_initial_network.png")
@@ -130,7 +132,7 @@ if __name__ == "__main__":
         "resource_node_introduction_step": 50,
     }
 
-    model3 = GovernanceModel(**scenario3_params)
+    model3 = GovernanceModel(**scenario3_params, seed=FIXED_SEED)
 
     print("Initial Network (Scenario 3):")
     visualize_network(model3, "Initial Network State (Scenario 3)", save_path="results/scenario3_initial_network.png")
