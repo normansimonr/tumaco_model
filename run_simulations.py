@@ -49,107 +49,131 @@ if __name__ == "__main__":
     # Create results directory if it doesn't exist
     os.makedirs('results', exist_ok=True)
 
+    NUM_RUNS = 100 # Number of simulation runs for statistical validity
+
     # Scenario 1: Facilitated Network Growth (Baseline)
-    params = {
-        "num_agents_per_type": {
-            AgentType.GOVERNMENT: 5,
-            AgentType.CSO: 5,
-            AgentType.PRIVATE_ENTERPRISE: 3,
-            AgentType.ACADEMIC: 2,
-        },
-        "link_decay_rate": 0.02,
-        "forum_frequency": 0.2,
-        "project_resource_threshold": 100,
-    }
+    print("Running Scenario 1: Facilitated Network Growth ({} runs)".format(NUM_RUNS))
+    scenario1_model_data_runs = []
+    scenario1_agent_data_runs = []
 
-    model = GovernanceModel(**params, seed=FIXED_SEED)
+    for i in range(NUM_RUNS):
+        # Re-initialize model for each run
+        params = {
+            "num_agents_per_type": {
+                AgentType.GOVERNMENT: 5,
+                AgentType.CSO: 5,
+                AgentType.PRIVATE_ENTERPRISE: 3,
+                AgentType.ACADEMIC: 2,
+            },
+            "link_decay_rate": 0.02,
+            "forum_frequency": 0.2,
+            "project_resource_threshold": 100,
+        }
+        model = GovernanceModel(**params, seed=FIXED_SEED + i) # Use a different seed for each run
 
-    print("Initial Network:")
-    visualize_network(model, "Initial Network State", save_path="results/initial_network.png")
+        # Only visualize the first run's initial and final state for representative purposes
+        if i == 0:
+            print("Initial Network (Run 1):")
+            visualize_network(model, "Initial Network State (Run 1)", save_path="results/initial_network.png")
 
-    for i in range(100):
-        model.step()
+        for step in range(100):
+            model.step()
 
-    print("\nFinal Network:")
-    visualize_network(model, "Final Network State", save_path="results/final_network.png")
+        if i == 0:
+            print("\nFinal Network (Run 1):")
+            visualize_network(model, "Final Network State (Run 1)", save_path="results/final_network.png")
 
-    model1_model_data = model.datacollector.get_model_vars_dataframe()
-    model1_agent_data = model.datacollector.get_agent_vars_dataframe()
-    model1_model_data.to_csv("results/scenario1_model_data.csv")
-    model1_agent_data.to_csv("results/scenario1_agent_data.csv")
-    print("Model-level data (Scenario 1) saved to results/scenario1_model_data.csv")
-    print("Agent-level data (Scenario 1) saved to results/scenario1_agent_data.csv")
+        scenario1_model_data_runs.append(model.datacollector.get_model_vars_dataframe())
+        scenario1_agent_data_runs.append(model.datacollector.get_agent_vars_dataframe())
 
-    print("\n" + "-"*30)
-    print("Running Scenario 2: Institutional Fragility and Key Actor Departure")
-    print("-"*30 + "\n")
-
-    scenario2_params = {
-        "num_agents_per_type": {
-            AgentType.GOVERNMENT: 5,
-            AgentType.CSO: 5,
-            AgentType.PRIVATE_ENTERPRISE: 3,
-            AgentType.ACADEMIC: 2,
-        },
-        "link_decay_rate": 0.02,
-        "forum_frequency": 0.2,
-        "project_resource_threshold": 100,
-        "midpoint_removal_step": 50,
-    }
-
-    model2 = GovernanceModel(**scenario2_params, seed=FIXED_SEED)
-
-    print("Initial Network (Scenario 2):")
-    visualize_network(model2, "Initial Network State (Scenario 2)", save_path="results/scenario2_initial_network.png")
-
-    for i in range(100):
-        model2.step()
-
-    print("\nFinal Network (Scenario 2):")
-    visualize_network(model2, "Final Network State (Scenario 2)", save_path="results/scenario2_final_network.png")
-
-    model2_model_data = model2.datacollector.get_model_vars_dataframe()
-    model2_agent_data = model2.datacollector.get_agent_vars_dataframe()
-    model2_model_data.to_csv("results/scenario2_model_data.csv")
-    model2_agent_data.to_csv("results/scenario2_agent_data.csv")
-    print("Model-level data (Scenario 2) saved to results/scenario2_model_data.csv")
-    print("Agent-level data (Scenario 2) saved to results/scenario2_agent_data.csv")
+    # Concatenate and save aggregated data for Scenario 1
+    full_scenario1_model_data = pd.concat(scenario1_model_data_runs, keys=range(NUM_RUNS), names=['Run', 'Step'])
+    full_scenario1_agent_data = pd.concat(scenario1_agent_data_runs, keys=range(NUM_RUNS), names=['Run', 'Step'])
+    full_scenario1_model_data.to_csv("results/scenario1_model_data_all_runs.csv")
+    full_scenario1_agent_data.to_csv("results/scenario1_agent_data_all_runs.csv")
+    print("Model-level data (Scenario 1, all runs) saved to results/scenario1_model_data_all_runs.csv")
+    print("Agent-level data (Scenario 1, all runs) saved to results/scenario1_agent_data_all_runs.csv")
 
     print("\n" + "-"*30)
-    print("Running Scenario 3: The Resource Opportunity Window")
-    print("-"*30)
+    print("Running Scenario 2: Institutional Fragility and Key Actor Departure ({} runs)".format(NUM_RUNS))
+    scenario2_model_data_runs = []
+    scenario2_agent_data_runs = []
 
-    scenario3_params = {
-        "num_agents_per_type": {
-            AgentType.GOVERNMENT: 5,
-            AgentType.CSO: 5,
-            AgentType.PRIVATE_ENTERPRISE: 3,
-            AgentType.ACADEMIC: 2,
-        },
-        "link_decay_rate": 0.02,
-        "forum_frequency": 0.2,
-        "project_resource_threshold": 100,
-        "resource_node_introduction_step": 50,
-    }
+    for i in range(NUM_RUNS):
+        scenario2_params = {
+            "num_agents_per_type": {
+                AgentType.GOVERNMENT: 5,
+                AgentType.CSO: 5,
+                AgentType.PRIVATE_ENTERPRISE: 3,
+                AgentType.ACADEMIC: 2,
+            },
+            "link_decay_rate": 0.02,
+            "forum_frequency": 0.2,
+            "project_resource_threshold": 100,
+            "midpoint_removal_step": 50,
+        }
+        model2 = GovernanceModel(**scenario2_params, seed=FIXED_SEED + i) # Use a different seed for each run
 
-    model3 = GovernanceModel(**scenario3_params, seed=FIXED_SEED)
+        if i == 0:
+            print("Initial Network (Scenario 2, Run 1):")
+            visualize_network(model2, "Initial Network State (Scenario 2, Run 1)", save_path="results/scenario2_initial_network.png")
 
-    print("Initial Network (Scenario 3):")
-    visualize_network(model3, "Initial Network State (Scenario 3)", save_path="results/scenario3_initial_network.png")
+        for step in range(100):
+            model2.step()
 
-    for i in range(100):
-        model3.step()
+        if i == 0:
+            print("\nFinal Network (Scenario 2, Run 1):")
+            visualize_network(model2, "Final Network State (Scenario 2, Run 1)", save_path="results/scenario2_final_network.png")
 
-    print("\nFinal Network (Scenario 3):")
-    visualize_network(model3, "Final Network State (Scenario 3)", save_path="results/scenario3_final_network.png")
+        scenario2_model_data_runs.append(model2.datacollector.get_model_vars_dataframe())
+        scenario2_agent_data_runs.append(model2.datacollector.get_agent_vars_dataframe())
 
-    model3_data = model3.datacollector.get_model_vars_dataframe()
-    agent3_data = model3.datacollector.get_agent_vars_dataframe()
+    # Concatenate and save aggregated data for Scenario 2
+    full_scenario2_model_data = pd.concat(scenario2_model_data_runs, keys=range(NUM_RUNS), names=['Run', 'Step'])
+    full_scenario2_agent_data = pd.concat(scenario2_agent_data_runs, keys=range(NUM_RUNS), names=['Run', 'Step'])
+    full_scenario2_model_data.to_csv("results/scenario2_model_data_all_runs.csv")
+    full_scenario2_agent_data.to_csv("results/scenario2_agent_data_all_runs.csv")
+    print("Model-level data (Scenario 2, all runs) saved to results/scenario2_model_data_all_runs.csv")
+    print("Agent-level data (Scenario 2, all runs) saved to results/scenario2_agent_data_all_runs.csv")
 
-    print("\nModel-level Data (Scenario 3):")
-    model3_data.to_csv("results/scenario3_model_data.csv")
-    print("Model-level data saved to results/scenario3_model_data.csv")
+    print("\n" + "-"*30)
+    print("Running Scenario 3: The Resource Opportunity Window ({} runs)".format(NUM_RUNS))
+    scenario3_model_data_runs = []
+    scenario3_agent_data_runs = []
 
-    print("\nAgent-level Data (Scenario 3):")
-    agent3_data.to_csv("results/scenario3_agent_data.csv")
-    print("Agent-level data saved to results/scenario3_agent_data.csv")
+    for i in range(NUM_RUNS):
+        scenario3_params = {
+            "num_agents_per_type": {
+                AgentType.GOVERNMENT: 5,
+                AgentType.CSO: 5,
+                AgentType.PRIVATE_ENTERPRISE: 3,
+                AgentType.ACADEMIC: 2,
+            },
+            "link_decay_rate": 0.02,
+            "forum_frequency": 0.2,
+            "project_resource_threshold": 100,
+            "resource_node_introduction_step": 50,
+        }
+        model3 = GovernanceModel(**scenario3_params, seed=FIXED_SEED + i) # Use a different seed for each run
+
+        if i == 0:
+            print("Initial Network (Scenario 3, Run 1):")
+            visualize_network(model3, "Initial Network State (Scenario 3, Run 1)", save_path="results/scenario3_initial_network.png")
+
+        for step in range(100):
+            model3.step()
+
+        if i == 0:
+            print("\nFinal Network (Scenario 3, Run 1):")
+            visualize_network(model3, "Final Network State (Scenario 3, Run 1)", save_path="results/scenario3_final_network.png")
+
+        scenario3_model_data_runs.append(model3.datacollector.get_model_vars_dataframe())
+        scenario3_agent_data_runs.append(model3.datacollector.get_agent_vars_dataframe())
+
+    # Concatenate and save aggregated data for Scenario 3
+    full_scenario3_model_data = pd.concat(scenario3_model_data_runs, keys=range(NUM_RUNS), names=['Run', 'Step'])
+    full_scenario3_agent_data = pd.concat(scenario3_agent_data_runs, keys=range(NUM_RUNS), names=['Run', 'Step'])
+    full_scenario3_model_data.to_csv("results/scenario3_model_data_all_runs.csv")
+    full_scenario3_agent_data.to_csv("results/scenario3_agent_data_all_runs.csv")
+    print("Model-level data (Scenario 3, all runs) saved to results/scenario3_model_data_all_runs.csv")
+    print("Agent-level data (Scenario 3, all runs) saved to results/scenario3_agent_data_all_runs.csv")
